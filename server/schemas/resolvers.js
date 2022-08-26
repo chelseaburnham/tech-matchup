@@ -4,117 +4,99 @@ const { Matchup, Tech } = require('../models');
 
 const resolvers = {
   Query: {
-    users: async () => {
-      return User.find().populate('thoughts');
+    techs: async () => {
+      return Tech.find();
     },
-    user: async (parent, { username }) => {
-      return User.findOne({ username }).populate('thoughts');
+    matchup: async (parent, { _id }) => {
+      var matchupID = _id
+      return Matchup.findOne({ _id: matchupID });
     },
-    thoughts: async (parent, { username }) => {
-      const params = username ? { username } : {};
-      return Thought.find(params).sort({ createdAt: -1 });
-    },
-    thought: async (parent, { thoughtId }) => {
-      return Thought.findOne({ _id: thoughtId });
-    },
-    me: async (parent, context) => {
-      if (context.user) {
-        return User.findOne({ _id: context.user._id }).populate('thoughts');
-      }
-      throw new AuthenticationError('You need to be logged in!');
-    },
+
   },
 
   Mutation: {
-    addUser: async (parent, { username, email, password }) => {
-      const user = await User.create({ username, email, password });
-      const token = signToken(user);
-      return { token, user };
+    addMatchup: async (parent, { tech1, tech2 }) => {
+      const matchup = await Matchup.create({ tech1, tech2 });
+      return { matchup };
     },
-    // login: async (parent, { email, password }) => {
-    //   const user = await User.findOne({ email });
 
-    //   if (!user) {
-    //     throw new AuthenticationError('No user found with this email address');
-    //   }
-
-    //   const correctPw = await user.isCorrectPassword(password);
-
-    //   if (!correctPw) {
-    //     throw new AuthenticationError('Incorrect credentials');
-    //   }
-
-    //   const token = signToken(user);
-
-    //   return { token, user };
-    // },
-    addThought: async (parent, { thoughtText }, context) => {
-      if (context.user) {
-        const thought = await Thought.create({
-          thoughtText,
-          thoughtAuthor: context.user.username,
-        });
-
-        await User.findOneAndUpdate(
-          { _id: context.user._id },
-          { $addToSet: { thoughts: thought._id } }
-        );
-
-        return thought;
-      }
-      throw new AuthenticationError('You need to be logged in!');
-    },
-    addComment: async (parent, { thoughtId, commentText }, context) => {
-      if (context.user) {
-        return Thought.findOneAndUpdate(
-          { _id: thoughtId },
-          {
-            $addToSet: {
-              comments: { commentText, commentAuthor: context.user.username },
-            },
-          },
-          {
-            new: true,
-            runValidators: true,
-          }
-        );
-      }
-      throw new AuthenticationError('You need to be logged in!');
-    },
-    removeThought: async (parent, { thoughtId }, context) => {
-      if (context.user) {
-        const thought = await Thought.findOneAndDelete({
-          _id: thoughtId,
-          thoughtAuthor: context.user.username,
-        });
-
-        await User.findOneAndUpdate(
-          { _id: context.user._id },
-          { $pull: { thoughts: thought._id } }
-        );
-
-        return thought;
-      }
-      throw new AuthenticationError('You need to be logged in!');
-    },
-    removeComment: async (parent, { thoughtId, commentId }, context) => {
-      if (context.user) {
-        return Thought.findOneAndUpdate(
-          { _id: thoughtId },
-          {
-            $pull: {
-              comments: {
-                _id: commentId,
-                commentAuthor: context.user.username,
-              },
-            },
-          },
-          { new: true }
-        );
-      }
-      throw new AuthenticationError('You need to be logged in!');
+    addVote: async (parent, { _id, techNum }) => {
+      var matchupID = _id
+      const vote = await Matchup.findOneAndUpdate({
+        _id: matchupID
+      },
+        { $inc: { [`tech${techNum}_votes`]: 1 } }
+      );
+      return { vote };
     },
   },
+  //     addThought: async (parent, { thoughtText }, context) => {
+  //       if (context.user) {
+  //         const thought = await Thought.create({
+  //           thoughtText,
+  //           thoughtAuthor: context.user.username,
+  //         });
+
+  //         await User.findOneAndUpdate(
+  //           { _id: context.user._id },
+  //           { $addToSet: { thoughts: thought._id } }
+  //         );
+
+  //         return thought;
+  //       }
+  //       throw new AuthenticationError('You need to be logged in!');
+  //     },
+  //     addComment: async (parent, { thoughtId, commentText }, context) => {
+  //       if (context.user) {
+  //         return Thought.findOneAndUpdate(
+  //           { _id: thoughtId },
+  //           {
+  //             $addToSet: {
+  //               comments: { commentText, commentAuthor: context.user.username },
+  //             },
+  //           },
+  //           {
+  //             new: true,
+  //             runValidators: true,
+  //           }
+  //         );
+  //       }
+  //       throw new AuthenticationError('You need to be logged in!');
+  //     },
+  //     removeThought: async (parent, { thoughtId }, context) => {
+  //       if (context.user) {
+  //         const thought = await Thought.findOneAndDelete({
+  //           _id: thoughtId,
+  //           thoughtAuthor: context.user.username,
+  //         });
+
+  //         await User.findOneAndUpdate(
+  //           { _id: context.user._id },
+  //           { $pull: { thoughts: thought._id } }
+  //         );
+
+  //         return thought;
+  //       }
+  //       throw new AuthenticationError('You need to be logged in!');
+  //     },
+  //     removeComment: async (parent, { thoughtId, commentId }, context) => {
+  //       if (context.user) {
+  //         return Thought.findOneAndUpdate(
+  //           { _id: thoughtId },
+  //           {
+  //             $pull: {
+  //               comments: {
+  //                 _id: commentId,
+  //                 commentAuthor: context.user.username,
+  //               },
+  //             },
+  //           },
+  //           { new: true }
+  //         );
+  //       }
+  //       throw new AuthenticationError('You need to be logged in!');
+  //     },
+  //   },
 };
 
 module.exports = resolvers;
